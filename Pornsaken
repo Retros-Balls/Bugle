@@ -1,0 +1,213 @@
+-- Load Rayfield
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kinlei/Rayfield/main/source"))()
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local LocalPlayer = Players.LocalPlayer
+
+local Window = Rayfield:CreateWindow({
+    Name = "Forsaken Helper",
+    LoadingTitle = "Loading...",
+    LoadingSubtitle = "by ChatGPT",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = nil,
+        FileName = "ForsakenHelperConfig"
+    },
+    KeySystem = false,
+})
+
+-- Helpers
+local function getPlayerByName(name)
+    for _, plr in pairs(Players:GetPlayers()) do
+        if plr.Name == name then return plr end
+    end
+    return nil
+end
+
+local function espForObject(obj, color)
+    if obj:FindFirstChild("Highlight") then return end
+    local highlight = Instance.new("Highlight")
+    highlight.Adornee = obj
+    highlight.FillColor = color
+    highlight.OutlineColor = Color3.new(0,0,0)
+    highlight.Parent = obj
+end
+
+-- AUTO BLOCK & AUTO PUNCH Guest1337
+local autoBlockEnabled = false
+local autoPunchEnabled = false
+local punchFlingEnabled = false
+local infiniteStaminaEnabled = false
+local espEnabled = {
+    killer = false,
+    generator = false,
+    item = false,
+    survivor = false,
+}
+
+-- Rayfield toggles/buttons/sliders
+
+Window:CreateToggle({
+    Name = "Auto Block Guest1337 (0.1s)",
+    CurrentValue = false,
+    Flag = "AutoBlock",
+    Callback = function(value)
+        autoBlockEnabled = value
+    end
+})
+
+Window:CreateToggle({
+    Name = "Auto Punch Guest1337 (0.1s)",
+    CurrentValue = false,
+    Flag = "AutoPunch",
+    Callback = function(value)
+        autoPunchEnabled = value
+    end
+})
+
+Window:CreateToggle({
+    Name = "Punch Fling Guest1337",
+    CurrentValue = false,
+    Flag = "PunchFling",
+    Callback = function(value)
+        punchFlingEnabled = value
+    end
+})
+
+Window:CreateToggle({
+    Name = "Infinite Stamina",
+    CurrentValue = false,
+    Flag = "InfiniteStamina",
+    Callback = function(value)
+        infiniteStaminaEnabled = value
+    end
+})
+
+Window:CreateToggle({
+    Name = "Killer ESP",
+    CurrentValue = false,
+    Flag = "KillerESP",
+    Callback = function(value)
+        espEnabled.killer = value
+    end
+})
+
+Window:CreateToggle({
+    Name = "Generator ESP",
+    CurrentValue = false,
+    Flag = "GeneratorESP",
+    Callback = function(value)
+        espEnabled.generator = value
+    end
+})
+
+Window:CreateToggle({
+    Name = "Item ESP",
+    CurrentValue = false,
+    Flag = "ItemESP",
+    Callback = function(value)
+        espEnabled.item = value
+    end
+})
+
+Window:CreateToggle({
+    Name = "Survivor ESP",
+    CurrentValue = false,
+    Flag = "SurvivorESP",
+    Callback = function(value)
+        espEnabled.survivor = value
+    end
+})
+
+-- Main loops
+
+-- Auto block & punch logic
+RunService.Heartbeat:Connect(function()
+    local target = getPlayerByName("Guest1337")
+    if not target or not target.Character or not target.Character:FindFirstChild("HumanoidRootPart") then return end
+
+    if autoBlockEnabled then
+        -- Example block action: you need the game's block function, this is a placeholder
+        -- e.g., fire a remote event or invoke a server method to block
+        -- game:GetService("ReplicatedStorage").Events.Block:FireServer()
+        -- Here just printing as example:
+        print("Blocking against Guest1337")
+    end
+
+    if autoPunchEnabled then
+        -- Example punch action: replace with actual punch remote event call
+        -- game:GetService("ReplicatedStorage").Events.Punch:FireServer(target.Character.HumanoidRootPart)
+        print("Punching Guest1337")
+    end
+
+    if punchFlingEnabled then
+        -- Punch fling usually involves manipulating velocity or position to fling the target
+        local hrp = target.Character:FindFirstChild("HumanoidRootPart")
+        local localHRP = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp and localHRP then
+            -- This is a simple fling attempt, adjust magnitude & method per game
+            local bodyVelocity = Instance.new("BodyVelocity")
+            bodyVelocity.Velocity = (hrp.Position - localHRP.Position).unit * 100
+            bodyVelocity.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+            bodyVelocity.Parent = hrp
+            game.Debris:AddItem(bodyVelocity, 0.2)
+            print("Punch fling applied on Guest1337")
+        end
+    end
+end)
+
+-- Infinite stamina logic (generic example)
+RunService.Heartbeat:Connect(function()
+    if infiniteStaminaEnabled and LocalPlayer.Character then
+        local stamina = LocalPlayer.Character:FindFirstChild("Stamina")
+        if stamina and stamina:IsA("NumberValue") then
+            stamina.Value = stamina.MaxValue or 100
+        end
+    end
+end)
+
+-- ESP logic (generic; you must adjust paths to actual game objects)
+RunService.Heartbeat:Connect(function()
+    if espEnabled.killer then
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                -- Assuming killer has a BoolValue named "IsKiller"
+                if plr:FindFirstChild("IsKiller") and plr.IsKiller.Value == true then
+                    espForObject(plr.Character.HumanoidRootPart, Color3.new(1, 0, 0)) -- red
+                end
+            end
+        end
+    end
+
+    if espEnabled.survivor then
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") then
+                -- Assuming survivors are players without IsKiller true
+                if not (plr:FindFirstChild("IsKiller") and plr.IsKiller.Value == true) then
+                    espForObject(plr.Character.HumanoidRootPart, Color3.new(0, 1, 0)) -- green
+                end
+            end
+        end
+    end
+
+    if espEnabled.generator then
+        -- Find generators in workspace (adjust path to actual generators)
+        for _, gen in pairs(workspace:GetChildren()) do
+            if gen.Name == "Generator" and gen:IsA("BasePart") then
+                espForObject(gen, Color3.new(1, 1, 0)) -- yellow
+            end
+        end
+    end
+
+    if espEnabled.item then
+        -- Find items in workspace (adjust path)
+        for _, item in pairs(workspace:GetChildren()) do
+            if item.Name == "Item" and item:IsA("BasePart") then
+                espForObject(item, Color3.new(0, 0, 1)) -- blue
+            end
+        end
+    end
+end)
+
+print("Forsaken Helper loaded! Use the GUI to toggle features.")
