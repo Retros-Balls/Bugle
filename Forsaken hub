@@ -1,0 +1,128 @@
+-- Services
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+
+-- Create RemoteEvents
+local CombatEvent = Instance.new("RemoteEvent")
+CombatEvent.Name = "CombatEvent"
+CombatEvent.Parent = ReplicatedStorage
+
+local StaminaToggleEvent = Instance.new("RemoteEvent")
+StaminaToggleEvent.Name = "StaminaToggleEvent"
+StaminaToggleEvent.Parent = ReplicatedStorage
+
+-- CLIENT SIDE (Player GUI)
+local function createPlayerGUI()
+    local player = Players.LocalPlayer
+    local playerGui = player:WaitForChild("PlayerGui")
+    
+    -- Main GUI
+    local combatGUI = Instance.new("ScreenGui")
+    combatGUI.Name = "Niggasaken Hub"
+    combatGUI.Parent = playerGui
+    
+    -- Toggle Button (Top Right)
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.new(0.15, 0, 0.07, 0)
+    toggleBtn.Position = UDim2.new(0.83, 0, 0.05, 0)
+    toggleBtn.Text = "INFINITE STAMINA: OFF"
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+    toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.Parent = combatGUI
+    
+    -- Block Controls (Bottom)
+    local controlFrame = Instance.new("Frame")
+    controlFrame.Size = UDim2.new(1, 0, 0.25, 0)
+    controlFrame.Position = UDim2.new(0, 0, 0.75, 0)
+    controlFrame.BackgroundTransparency = 1
+    controlFrame.Parent = combatGUI
+    
+    -- Light Block Button
+    local lightBlockBtn = Instance.new("TextButton")
+    lightBlockBtn.Size = UDim2.new(0.4, 0, 0.7, 0)
+    lightBlockBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
+    lightBlockBtn.Text = "LIGHT BLOCK\n(0.1s)"
+    lightBlockBtn.TextColor3 = Color3.fromRGB(200, 200, 255)
+    lightBlockBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 120)
+    lightBlockBtn.Font = Enum.Font.GothamBold
+    lightBlockBtn.Parent = controlFrame
+    
+    -- Heavy Block Button
+    local heavyBlockBtn = Instance.new("TextButton")
+    heavyBlockBtn.Size = UDim2.new(0.4, 0, 0.7, 0)
+    heavyBlockBtn.Position = UDim2.new(0.55, 0, 0.15, 0)
+    heavyBlockBtn.Text = "HEAVY BLOCK\n(0.5s)"
+    heavyBlockBtn.TextColor3 = Color3.fromRGB(255, 200, 200)
+    heavyBlockBtn.BackgroundColor3 = Color3.fromRGB(120, 50, 50)
+    heavyBlockBtn.Font = Enum.Font.GothamBold
+    heavyBlockBtn.Parent = controlFrame
+
+    -- Toggle functionality
+    local infiniteStamina = false
+    
+    toggleBtn.MouseButton1Click:Connect(function()
+        infiniteStamina = not infiniteStamina
+        if infiniteStamina then
+            toggleBtn.Text = "INFINITE STAMINA: ON"
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
+        else
+            toggleBtn.Text = "INFINITE STAMINA: OFF"
+            toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
+        end
+        StaminaToggleEvent:FireServer(infiniteStamina)
+    end)
+    
+    -- Block buttons
+    lightBlockBtn.MouseButton1Click:Connect(function()
+        CombatEvent:FireServer("BlockAttempt", "Light")
+    end)
+    
+    heavyBlockBtn.MouseButton1Click:Connect(function()
+        CombatEvent:FireServer("BlockAttempt", "Heavy")
+    end)
+end
+
+-- SERVER SIDE
+local playerSettings = {}
+
+Players.PlayerAdded:Connect(function(player)
+    playerSettings[player] = {
+        InfiniteStamina = false,
+        LastLightBlock = 0,
+        LastHeavyBlock = 0
+    }
+    
+    StaminaToggleEvent.OnServerEvent:Connect(function(plr, toggleState)
+        if plr == player then
+            playerSettings[player].InfiniteStamina = toggleState
+        end
+    end)
+    
+    player.CharacterAdded:Connect(function(character)
+        local humanoid = character:WaitForChild("Humanoid")
+        
+        -- Block handling
+        CombatEvent.OnServerEvent:Connect(function(plr, action, blockType)
+            if plr == player and (blockType == "Light" or blockType == "Heavy") then
+                local currentTime = os.clock()
+                local settings = playerSettings[player]
+                local cooldown = (blockType == "Light") and 0.5 or 1.0
+                
+                if settings.InfiniteStamina or currentTime - settings["Last"..blockType.."Block"] > cooldown then
+                    settings["Last"..blockType.."Block"] = currentTime
+                    
+                    -- Apply block effects here
+                    -- ...
+                end
+            end
+        end)
+    end)
+end)
+
+-- Initialize
+if game:GetService("RunService"):IsClient() then
+    createPlayerGUI()
+end
