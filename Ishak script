@@ -1,128 +1,157 @@
--- Services
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
+-- RayField Implementation for Block System
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
 
--- Create RemoteEvents
-local CombatEvent = Instance.new("RemoteEvent")
-CombatEvent.Name = "CombatEvent"
-CombatEvent.Parent = ReplicatedStorage
+-- Create main window
+local Window = Rayfield:CreateWindow({
+   Name = "Niggersaken Hub",
+   LoadingTitle = "lele",
+   LoadingSubtitle = "by [Your Name]",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "ForsakenConfig",
+      FileName = "CombatSettings"
+   }
+})
 
-local StaminaToggleEvent = Instance.new("RemoteEvent")
-StaminaToggleEvent.Name = "StaminaToggleEvent"
-StaminaToggleEvent.Parent = ReplicatedStorage
+-- Create tabs
+local CombatTab = Window:CreateTab("Combat", 4483362458)
+local SettingsTab = Window:CreateTab("Settings", 4483362458)
 
--- CLIENT SIDE (Player GUI)
-local function createPlayerGUI()
-    local player = Players.LocalPlayer
-    local playerGui = player:WaitForChild("PlayerGui")
-    
-    -- Main GUI
-    local combatGUI = Instance.new("ScreenGui")
-    combatGUI.Name = "PlayerCombatGUI"
-    combatGUI.Parent = playerGui
-    
-    -- Toggle Button (Top Right)
-    local toggleBtn = Instance.new("TextButton")
-    toggleBtn.Size = UDim2.new(0.15, 0, 0.07, 0)
-    toggleBtn.Position = UDim2.new(0.83, 0, 0.05, 0)
-    toggleBtn.Text = "INFINITE STAMINA: OFF"
-    toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-    toggleBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    toggleBtn.Font = Enum.Font.GothamBold
-    toggleBtn.Parent = combatGUI
-    
-    -- Block Controls (Bottom)
-    local controlFrame = Instance.new("Frame")
-    controlFrame.Size = UDim2.new(1, 0, 0.25, 0)
-    controlFrame.Position = UDim2.new(0, 0, 0.75, 0)
-    controlFrame.BackgroundTransparency = 1
-    controlFrame.Parent = combatGUI
-    
-    -- Light Block Button
-    local lightBlockBtn = Instance.new("TextButton")
-    lightBlockBtn.Size = UDim2.new(0.4, 0, 0.7, 0)
-    lightBlockBtn.Position = UDim2.new(0.05, 0, 0.15, 0)
-    lightBlockBtn.Text = "LIGHT BLOCK\n(0.1s)"
-    lightBlockBtn.TextColor3 = Color3.fromRGB(200, 200, 255)
-    lightBlockBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 120)
-    lightBlockBtn.Font = Enum.Font.GothamBold
-    lightBlockBtn.Parent = controlFrame
-    
-    -- Heavy Block Button
-    local heavyBlockBtn = Instance.new("TextButton")
-    heavyBlockBtn.Size = UDim2.new(0.4, 0, 0.7, 0)
-    heavyBlockBtn.Position = UDim2.new(0.55, 0, 0.15, 0)
-    heavyBlockBtn.Text = "HEAVY BLOCK\n(0.5s)"
-    heavyBlockBtn.TextColor3 = Color3.fromRGB(255, 200, 200)
-    heavyBlockBtn.BackgroundColor3 = Color3.fromRGB(120, 50, 50)
-    heavyBlockBtn.Font = Enum.Font.GothamBold
-    heavyBlockBtn.Parent = controlFrame
+-- Combat Controls Section
+local BlockSection = CombatTab:CreateSection("Block Controls")
 
-    -- Toggle functionality
-    local infiniteStamina = false
-    
-    toggleBtn.MouseButton1Click:Connect(function()
-        infiniteStamina = not infiniteStamina
-        if infiniteStamina then
-            toggleBtn.Text = "INFINITE STAMINA: ON"
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
-        else
-            toggleBtn.Text = "INFINITE STAMINA: OFF"
-            toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-        end
-        StaminaToggleEvent:FireServer(infiniteStamina)
-    end)
-    
-    -- Block buttons
-    lightBlockBtn.MouseButton1Click:Connect(function()
-        CombatEvent:FireServer("BlockAttempt", "Light")
-    end)
-    
-    heavyBlockBtn.MouseButton1Click:Connect(function()
-        CombatEvent:FireServer("BlockAttempt", "Heavy")
-    end)
-end
+-- Infinite Stamina Toggle
+local InfiniteStaminaToggle = CombatTab:CreateToggle({
+   Name = "Infinite Stamina Mode",
+   CurrentValue = false,
+   Flag = "InfiniteStamina",
+   Callback = function(Value)
+       _G.InfiniteStamina = Value
+       Rayfield:Notify({
+          Title = "Stamina Mode Changed",
+          Content = Value and "Infinite stamina activated" or "Normal stamina restored",
+          Duration = 1.5,
+          Image = 4483362458
+       })
+   end,
+})
 
--- SERVER SIDE
-local playerSettings = {}
+-- Block Buttons
+local LightBlockButton = CombatTab:CreateButton({
+   Name = "Light Block (0.1s)",
+   Callback = function()
+       if _G.BlockCooldown then return end
+       
+       game:GetService("ReplicatedStorage").CombatEvent:FireServer("BlockAttempt", "Light")
+       
+       -- Cooldown effect
+       _G.BlockCooldown = true
+       LightBlockButton:Set("Text", "Cooldown...")
+       task.delay(0.5, function()
+           _G.BlockCooldown = false
+           LightBlockButton:Set("Text", "Light Block (0.1s)")
+       end)
+   end
+})
 
-Players.PlayerAdded:Connect(function(player)
-    playerSettings[player] = {
-        InfiniteStamina = false,
-        LastLightBlock = 0,
-        LastHeavyBlock = 0
-    }
-    
-    StaminaToggleEvent.OnServerEvent:Connect(function(plr, toggleState)
-        if plr == player then
-            playerSettings[player].InfiniteStamina = toggleState
-        end
-    end)
-    
-    player.CharacterAdded:Connect(function(character)
-        local humanoid = character:WaitForChild("Humanoid")
+local HeavyBlockButton = CombatTab:CreateButton({
+   Name = "Heavy Block (0.5s)",
+   Callback = function()
+       if _G.BlockCooldown then return end
+       
+       game:GetService("ReplicatedStorage").CombatEvent:FireServer("BlockAttempt", "Heavy")
+       
+       -- Cooldown effect
+       _G.BlockCooldown = true
+       HeavyBlockButton:Set("Text", "Cooldown...")
+       task.delay(1.0, function()
+           _G.BlockCooldown = false
+           HeavyBlockButton:Set("Text", "Heavy Block (0.5s)")
+       end)
+   end
+})
+
+-- Visual Feedback Section
+local FeedbackSection = CombatTab:CreateSection("Visual Feedback")
+
+local BlockStatusLabel = CombatTab:CreateLabel("Status: Ready")
+local PingDisplayLabel = CombatTab:CreateLabel("Current Ping: Calculating...")
+
+-- Ping Monitor
+task.spawn(function()
+    while task.wait(1) do
+        local ping = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
+        PingDisplayLabel:Set("Current Ping: "..ping.."ms")
         
-        -- Block handling
-        CombatEvent.OnServerEvent:Connect(function(plr, action, blockType)
-            if plr == player and (blockType == "Light" or blockType == "Heavy") then
-                local currentTime = os.clock()
-                local settings = playerSettings[player]
-                local cooldown = (blockType == "Light") and 0.5 or 1.0
-                
-                if settings.InfiniteStamina or currentTime - settings["Last"..blockType.."Block"] > cooldown then
-                    settings["Last"..blockType.."Block"] = currentTime
-                    
-                    -- Apply block effects here
-                    -- ...
-                end
-            end
-        end)
-    end)
+        -- Auto-adjust based on ping
+        if ping > 200 then
+            PingDisplayLabel:Set("Current Ping: "..ping.."ms (High Latency)")
+        end
+    end
 end)
 
--- Initialize
-if game:GetService("RunService"):IsClient() then
-    createPlayerGUI()
-end
+-- Settings Section
+local ConfigSection = SettingsTab:CreateSection("Configuration")
+
+-- Timing Adjustments
+SettingsTab:CreateSlider({
+   Name = "Light Block Window",
+   Range = {0.05, 0.2},
+   Increment = 0.01,
+   Suffix = "seconds",
+   CurrentValue = 0.1,
+   Flag = "LightBlockTiming",
+   Callback = function(Value)
+       _G.LightBlockDuration = Value
+       LightBlockButton:Set("Name", "Light Block ("..Value.."s)")
+   end
+})
+
+SettingsTab:CreateSlider({
+   Name = "Heavy Block Window",
+   Range = {0.3, 1.0},
+   Increment = 0.05,
+   Suffix = "seconds",
+   CurrentValue = 0.5,
+   Flag = "HeavyBlockTiming",
+   Callback = function(Value)
+       _G.HeavyBlockDuration = Value
+       HeavyBlockButton:Set("Name", "Heavy Block ("..Value.."s)")
+   end
+})
+
+-- Keybinds
+SettingsTab:CreateKeybind({
+   Name = "Light Block Keybind",
+   CurrentKeybind = "Q",
+   HoldToInteract = false,
+   Flag = "LightBlockKey",
+   Callback = function(Key)
+       _G.LightBlockKey = Key
+   end,
+})
+
+SettingsTab:CreateKeybind({
+   Name = "Heavy Block Keybind",
+   CurrentKeybind = "E",
+   HoldToInteract = false,
+   Flag = "HeavyBlockKey",
+   Callback = function(Key)
+       _G.HeavyBlockKey = Key
+   end,
+})
+
+-- Keybind Handler
+UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    
+    if input.KeyCode == Enum.KeyCode[_G.LightBlockKey or "Q"] then
+        LightBlockButton.Callback()
+    elseif input.KeyCode == Enum.KeyCode[_G.HeavyBlockKey or "E"] then
+        HeavyBlockButton.Callback()
+    end
+end)
+
+-- Theme Customization (Optional)
+Window:SelectTab(CombatTab)
+Rayfield:LoadConfiguration() -- Load saved settings
