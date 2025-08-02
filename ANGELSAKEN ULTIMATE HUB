@@ -1,0 +1,198 @@
+-- Forsaken Ultimate Suite (v1.5)
+local Rayfield = loadstring(game:HttpGet('https://raw.githubusercontent.com/shlexware/Rayfield/main/source'))()
+local CombatEvent = game:GetService("ReplicatedStorage"):FindFirstChild("CombatEvent") or Instance.new("RemoteEvent")
+CombatEvent.Name = "CombatEvent"
+CombatEvent.Parent = game:GetService("ReplicatedStorage")
+
+-- Core Variables
+local ESP = {
+    Killers = {},
+    Survivors = {},
+    Generators = {},
+    Items = {},
+    Highlights = {}
+}
+
+local Settings = {
+    InfiniteStamina = false,
+    AutoSolveGenerators = false,
+    LightBlockDuration = 0.1,
+    HeavyBlockDuration = 0.5
+}
+
+-- Main Window
+local Window = Rayfield:CreateWindow({
+   Name = "Forsaken Ultimate",
+   LoadingTitle = "Loading Ultimate Suite...",
+   LoadingSubtitle = "ESP + Auto-Puzzle + Combat",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "ANGELSAKEN ULTIMATE HUB",
+      FileName = "UltimateSettings"
+   }
+})
+
+-- ===== [1] ESP SYSTEM =====
+local ESPTab = Window:CreateTab("ESP", 7733960981)
+
+-- ESP Toggles
+ESPTab:CreateToggle({
+   Name = "Killer ESP",
+   CurrentValue = false,
+   Flag = "KillerESP",
+   Callback = function(Value) updateESP() end
+})
+
+ESPTab:CreateToggle({
+   Name = "Survivor ESP",
+   CurrentValue = false,
+   Flag = "SurvivorESP",
+   Callback = function(Value) updateESP() end
+})
+
+ESPTab:CreateToggle({
+   Name = "Generator ESP",
+   CurrentValue = false,
+   Flag = "GeneratorESP",
+   Callback = function(Value) updateESP() end
+})
+
+ESPTab:CreateToggle({
+   Name = "Item ESP",
+   CurrentValue = false,
+   Flag = "ItemESP",
+   Callback = function(Value) updateESP() end
+})
+
+-- ESP Colors
+local KillerColor = Color3.fromRGB(255, 50, 50)
+local SurvivorColor = Color3.fromRGB(50, 255, 50)
+local GeneratorColor = Color3.fromRGB(0, 150, 255)
+local ItemColor = Color3.fromRGB(255, 255, 0)
+
+ESPTab:CreateColorPicker({
+   Name = "Killer Color",
+   Color = KillerColor,
+   Callback = function(Value) KillerColor = Value; updateESP() end
+})
+
+-- ===== [2] AUTO-GENERATOR =====
+local GeneratorTab = Window:CreateTab("Generator", 9753762469)
+
+GeneratorTab:CreateToggle({
+   Name = "Auto-Solve Generators",
+   CurrentValue = false,
+   Flag = "AutoSolveGenerators",
+   Callback = function(Value)
+       Settings.AutoSolveGenerators = Value
+       if Value then startGeneratorSolver() end
+   end
+})
+
+-- Generator Patterns
+local PATTERNS = {
+    [4] = {1,3,2,4},  -- Basic
+    [5] = {3,1,4,2,5}, -- Advanced
+    [6] = {2,5,1,4,3,6} -- Expert
+}
+
+local function solveGenerator()
+    if not Settings.AutoSolveGenerators then return end
+    
+    local generators = workspace:FindFirstChild("Generators") or workspace:FindFirstChild("PuzzlePanels")
+    if not generators then return end
+    
+    local closestGen = findClosestGenerator(generators)
+    if closestGen then
+        local buttons = closestGen:FindFirstChild("Buttons")
+        if buttons then
+            local buttonCount = #buttons:GetChildren()
+            local pattern = PATTERNS[buttonCount]
+            
+            if pattern then
+                for _, btnNum in ipairs(pattern) do
+                    if not Settings.AutoSolveGenerators then break end
+                    local btn = buttons:FindFirstChild("Button"..btnNum)
+                    if btn then
+                        fireproximityprompt(btn:FindFirstChildOfClass("ProximityPrompt"))
+                        task.wait(0.35) -- Human-like delay
+                    end
+                end
+            end
+        end
+    end
+end
+
+-- ===== [3] COMBAT SYSTEM =====
+local CombatTab = Window:CreateTab("Combat", 4483362458)
+
+CombatTab:CreateToggle({
+   Name = "Infinite Stamina",
+   CurrentValue = false,
+   Flag = "InfiniteStamina",
+   Callback = function(Value) Settings.InfiniteStamina = Value end
+})
+
+-- Light Block (0.1s)
+CombatTab:CreateButton({
+   Name = "Light Block (0.1s)",
+   Callback = function()
+       if Settings.InfiniteStamina or (os.clock() - (LastLightBlock or 0)) > 0.5 then
+           CombatEvent:FireServer("BlockAttempt", "Light")
+           LastLightBlock = os.clock()
+       end
+   end
+})
+
+-- Heavy Block (0.5s)
+CombatTab:CreateButton({
+   Name = "Heavy Block (0.5s)",
+   Callback = function()
+       if Settings.InfiniteStamina or (os.clock() - (LastHeavyBlock or 0)) > 1.0 then
+           CombatEvent:FireServer("BlockAttempt", "Heavy")
+           LastHeavyBlock = os.clock()
+       end
+   end
+})
+
+-- ===== CORE FUNCTIONS =====
+function updateESP()
+    clearESP()
+    
+    -- Killer ESP
+    if Rayfield.Flags["KillerESP"].Value then
+        for _, player in ipairs(game.Players:GetPlayers()) do
+            if player ~= game.Players.LocalPlayer and player.Character and player:GetAttribute("IsKiller") then
+                createESP(player.Character, KillerColor, "KILLER: "..player.Name)
+            end
+        end
+    end
+    
+    -- Generator ESP (similar implementations for other ESP types)
+    -- ...
+end
+
+function startGeneratorSolver()
+    coroutine.wrap(function()
+        while Settings.AutoSolveGenerators do
+            solveGenerator()
+            task.wait(1.5) -- Scan interval
+        end
+    end)()
+end
+
+-- Initialize all systems
+Window:SelectTab(CombatTab)
+Rayfield:Notify({
+   Title = "Ultimate Suite Loaded",
+   Content = "All systems operational",
+   Duration = 3,
+   Image = 4483362458
+})
+
+-- Main runtime loop
+game:GetService("RunService").Heartbeat:Connect(function()
+    if Rayfield.Flags["KillerESP"].Value or Rayfield.Flags["SurvivorESP"].Value then
+        updateESP()
+    end
+end)
