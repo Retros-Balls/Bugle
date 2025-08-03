@@ -1,110 +1,184 @@
--- Forsaken UNIVERSAL SCRIPT (Works with ANY Block/Punch System)
-local Rayfield = loadstring(game:HttpGet("https://sirius.menu/rayfield"))()
+-- Load Rayfield UI
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source.lua"))()
+
+-- Create UI Window
 local Window = Rayfield:CreateWindow({
-    Name = "Forsaken Universal",
-    LoadingTitle = "Loading 100% Working Version",
-    LoadingSubtitle = "Buttons & RemoteEvents | By ChatGPT",
-    ConfigurationSaving = { Enabled = false }
+   Name = "Forsaken Hub",
+   LoadingTitle = "Forsaken Utility",
+   LoadingSubtitle = "By Guest 1337 Tools",
+   ConfigurationSaving = {
+      Enabled = true,
+      FolderName = "ForsakenHub",
+      FileName = "Config"
+   },
+   Discord = {
+      Enabled = false
+   },
+   KeySystem = false
 })
 
-local Main = Window:CreateTab("Combat", 4483362458)
-local ESPTab = Window:CreateTab("ESP", 4483362458)
-local plr = game.Players.LocalPlayer
+-- Sliders shared by both AutoBlock and AutoPunch
+local blockDistance = 10
+local punchDistance = 10
 
--- UNIVERSAL CONFIG
-local Settings = {
-    BlockRange = 15,
-    PunchRange = 15,
-    Killers = {"Jason", "Noli", "John Doe", "1x1x1x1", "coolkid"},
-    ChargeTime = 0
-}
+-- Main Tab
+local MainTab = Window:CreateTab("Main", 4483362458)
 
--- UNIVERSAL SLIDERS (0-25)
-Main:CreateSlider({
-    Name = "Block Range",
-    Range = {0, 25},
-    Increment = 1,
-    CurrentValue = Settings.BlockRange,
-    Callback = function(v) Settings.BlockRange = v end
+-- Auto Block Toggle
+MainTab:CreateToggle({
+   Name = "Auto Block (Guest 1337)",
+   CurrentValue = false,
+   Flag = "AutoBlock",
+   Callback = function(enabled)
+       getgenv().AutoBlock = enabled
+   end,
 })
 
-Main:CreateSlider({
-    Name = "Punch Range",
-    Range = {0, 25},
-    Increment = 1,
-    CurrentValue = Settings.PunchRange,
-    Callback = function(v) Settings.PunchRange = v end
+-- Auto Block Distance Slider
+MainTab:CreateSlider({
+   Name = "Auto Block Distance",
+   Range = {0, 25},
+   Increment = 1,
+   Suffix = "studs",
+   CurrentValue = blockDistance,
+   Callback = function(Value)
+       blockDistance = Value
+   end,
 })
 
--- UNIVERSAL AUTO-BLOCK (Works with both systems)
-Main:CreateToggle({
-    Name = "Perfect Block (0.001s)",
-    CurrentValue = false,
-    Callback = function(state)
-        if state then
-            task.spawn(function()
-                while task.wait(0.001) do
-                    local char = plr.Character
-                    if not char then continue end
-                    
-                    local blockTool = char:FindFirstChild("Block")
-                    if not blockTool then continue end
-                    
-                    -- Try BOTH methods (works with either system)
-                    pcall(function()
-                        -- Method 1: RemoteEvent (if exists)
-                        if blockTool:FindFirstChild("RemoteEvent") then
-                            blockTool.RemoteEvent:FireServer()
-                        -- Method 2: Direct activation (for button tools)
-                        else
-                            blockTool:Activate()
-                        end
-                        
-                        Settings.ChargeTime = tick() + 3 -- Charge punch
-                    end)
-                end
-            end)
-        end
-    end
+-- Auto Punch Toggle
+MainTab:CreateToggle({
+   Name = "Auto Punch (after Block)",
+   CurrentValue = false,
+   Flag = "AutoPunch",
+   Callback = function(enabled)
+       getgenv().AutoPunch = enabled
+   end,
 })
 
--- UNIVERSAL AUTO-PUNCH (Works with both systems)
-Main:CreateToggle({
-    Name = "Charged Punch",
-    CurrentValue = false,
-    Callback = function(state)
-        if state then
-            task.spawn(function()
-                while task.wait(0.001) do
-                    if tick() > Settings.ChargeTime then continue end
-                    
-                    local char = plr.Character
-                    if not char then continue end
-                    
-                    local punchTool = char:FindFirstChild("Punch")
-                    if not punchTool then continue end
-                    
-                    -- Try BOTH methods
-                    pcall(function()
-                        if punchTool:FindFirstChild("RemoteEvent") then
-                            punchTool.RemoteEvent:FireServer()
-                        else
-                            punchTool:Activate()
-                        end
-                    end)
-                end
-            end)
-        end
-    end
+-- Auto Punch Distance Slider
+MainTab:CreateSlider({
+   Name = "Auto Punch Distance",
+   Range = {0, 25},
+   Increment = 1,
+   Suffix = "studs",
+   CurrentValue = punchDistance,
+   Callback = function(Value)
+       punchDistance = Value
+   end,
 })
 
--- WALLHACK ESP (Always works)
-local Highlights = {}
+-- Infinite Stamina Toggle
+MainTab:CreateToggle({
+   Name = "Infinite Stamina",
+   CurrentValue = false,
+   Flag = "InfStamina",
+   Callback = function(enabled)
+       getgenv().InfStamina = enabled
+   end,
+})
 
-local function CreateESP(player, color)
-    if not player.Character or Highlights[player] then return end
-    
-    local highlight = Instance.new("Highlight")
+-- ESP Toggle
+MainTab:CreateToggle({
+   Name = "ESP (Killers = Red, Survivors = Green)",
+   CurrentValue = false,
+   Flag = "ESP",
+   Callback = function(enabled)
+       getgenv().EnableESP = enabled
+   end,
+})
+
+-- Function: Is Killer
+local function isKiller(player)
+   return player.Team and player.Team.Name:lower():find("killer")
+end
+
+-- Function: Is Survivor
+local function isSurvivor(player)
+   return player.Team and player.Team.Name:lower():find("survivor")
+end
+
+-- ESP Logic
+task.spawn(function()
+   while true do
+       if getgenv().EnableESP then
+           for _, player in pairs(game.Players:GetPlayers()) do
+               if player ~= game.Players.LocalPlayer and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                   if not player.Character:FindFirstChild("Highlight") then
+                       local highlight = Instance.new("Highlight")
+                       highlight.Name = "Highlight"
+                       highlight.Adornee = player.Character
+                       highlight.Parent = player.Character
+                       if isKiller(player) then
+                           highlight.FillColor = Color3.new(1, 0, 0)
+                       elseif isSurvivor(player) then
+                           highlight.FillColor = Color3.new(0, 1, 0)
+                       end
+                   end
+               end
+           end
+       else
+           for _, player in pairs(game.Players:GetPlayers()) do
+               if player.Character and player.Character:FindFirstChild("Highlight") then
+                   player.Character:FindFirstChild("Highlight"):Destroy()
+               end
+           end
+       end
+       task.wait(1)
+   end
+end)
+
+-- Auto Block + Auto Punch Logic
+task.spawn(function()
+   while task.wait(0.05) do
+       local player = game.Players.LocalPlayer
+       if not player.Character then continue end
+       local char = player.Character
+       local hrp = char:FindFirstChild("HumanoidRootPart")
+       if not hrp then continue end
+       local name = player.Name
+       
+       -- Check Guest 1337
+       if char.Name ~= "Guest 1337" then continue end
+
+       for _, enemy in pairs(game.Workspace:GetDescendants()) do
+           if enemy:IsA("Model") and enemy:FindFirstChild("HumanoidRootPart") and enemy:FindFirstChild("Humanoid") then
+               local dist = (hrp.Position - enemy.HumanoidRootPart.Position).Magnitude
+               if getgenv().AutoBlock and dist <= blockDistance then
+                   -- Simulate block (example: fire remote or keypress)
+                   local block = char:FindFirstChild("Block")
+                   if block and block:IsA("RemoteEvent") then
+                       block:FireServer()
+                   end
+               end
+
+               if getgenv().AutoPunch and dist <= punchDistance then
+                   local punch = char:FindFirstChild("Punch")
+                   if punch and punch:IsA("RemoteEvent") then
+                       task.wait(0.001)
+                       punch:FireServer()
+                   end
+               end
+           end
+       end
+   end
+end)
+
+-- Infinite Stamina Logic
+task.spawn(function()
+   while true do
+       task.wait(0.1)
+       if getgenv().InfStamina then
+           local char = game.Players.LocalPlayer.Character
+           if char and char:FindFirstChild("Stamina") then
+               local stam = char.Stamina
+               if stam:IsA("NumberValue") then
+                   stam.Value = 100
+               end
+           end
+       end
+   end
+end)
     highlight.Name = "ForsakenESP"
     highlight.FillColor = color
     highlight.OutlineColor = Color3.new(1,1,1)
