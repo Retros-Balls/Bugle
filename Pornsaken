@@ -1,110 +1,37 @@
--- Load Rayfield
-local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/Kinlei/Rayfield/main/source"))()
+-- ✅ Forsaken Rayfield GUI (Delta Executor Compatible + Rayfield UI) -- ANGEL HUB | Features: Auto Block (Guest 1337), Infinite Stamina, Auto Punch, Generator Solve, ESPs
 
-local Players = game:GetService("Players")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
+-- Load Rayfield local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
-local Window = Rayfield:CreateWindow({
-    Name = "Forsaken Helper",
-    LoadingTitle = "Loading...",
-    LoadingSubtitle = "by ChatGPT",
-    ConfigurationSaving = {
-        Enabled = true,
-        FolderName = nil,
-        FileName = "ForsakenHelperConfig"
-    },
-    KeySystem = false,
-})
+local Window = Rayfield:CreateWindow({ Name = "ANGEL HUB", LoadingTitle = "ANGEL HUB", LoadingSubtitle = "by ChatGPT", ConfigurationSaving = { Enabled = true, FolderName = nil, FileName = "AngelHubCfg" }, Discord = { Enabled = false }, KeySystem = false })
 
--- Helpers
-local function getPlayerByName(name)
-    for _, plr in pairs(Players:GetPlayers()) do
-        if plr.Name == name then return plr end
-    end
-    return nil
-end
+local Player = game.Players.LocalPlayer local Character = Player.Character or Player.CharacterAdded:Wait() local RunService = game:GetService("RunService")
 
-local function espForObject(obj, color)
-    if obj:FindFirstChild("Highlight") then return end
-    local highlight = Instance.new("Highlight")
-    highlight.Adornee = obj
-    highlight.FillColor = color
-    highlight.OutlineColor = Color3.new(0,0,0)
-    highlight.Parent = obj
-end
+-- Feature toggles and settings local AutoBlockEnabled = false local AutoBlockRange = 15 local AutoPunchEnabled = false local AutoPunchRange = 15 local InfiniteStaminaEnabled = false local SolveGenEnabled = false local KillerESPEnabled = false local SurvivorESPEnabled = false local GenESPEnabled = false local ItemESPEnabled = false
 
--- AUTO BLOCK & AUTO PUNCH Guest1337
-local autoBlockEnabled = false
-local autoPunchEnabled = false
-local punchFlingEnabled = false
-local infiniteStaminaEnabled = false
-local espEnabled = {
-    killer = false,
-    generator = false,
-    item = false,
-    survivor = false,
-}
+local blockTools = {"slash","punch","gashing wound","behead","walkspeed override","stab","void rush"} local killers = {"Jason","Noli","John Doe","1x1x1x1","coolkid"} local survivors = {"Guest 1337","007n7","Two Time","Chance","Builderman","Noob","Elliot","Dusekkar"}
 
--- Rayfield toggles/buttons/sliders
+function highlight(obj, color) if not obj:FindFirstChild("Highlight") then local h = Instance.new("Highlight") h.FillColor = color h.OutlineColor = Color3.new(1,1,1) h.FillTransparency = 0.3 h.OutlineTransparency = 0.5 h.Adornee = obj h.Parent = obj task.delay(5, function() h:Destroy() end) end end
 
-Window:CreateToggle({
-    Name = "Auto Block Guest1337 (0.1s)",
-    CurrentValue = false,
-    Flag = "AutoBlock",
-    Callback = function(value)
-        autoBlockEnabled = value
-    end
-})
+-- Auto Block Window:CreateSlider({ Name = "Auto Block Range", Range = {0, 25}, Increment = 1, CurrentValue = 15, Callback = function(v) AutoBlockRange = v end })
 
-Window:CreateToggle({
-    Name = "Auto Punch Guest1337 (0.1s)",
-    CurrentValue = false,
-    Flag = "AutoPunch",
-    Callback = function(value)
-        autoPunchEnabled = value
-    end
-})
+Window:CreateToggle({ Name = "Auto Block (Guest 1337)", CurrentValue = false, Callback = function(v) AutoBlockEnabled = v task.spawn(function() while AutoBlockEnabled and task.wait(0.0001) do if Player.Name ~= "Guest 1337" then continue end local tool = Character:FindFirstChildOfClass("Tool") if tool and tool:FindFirstChild("RemoteEvent") then for _, p in pairs(game.Players:GetPlayers()) do if p ~= Player and p.Character and p:DistanceFromCharacter(Character.HumanoidRootPart.Position) <= AutoBlockRange then local ttool = p.Character:FindFirstChildOfClass("Tool") if ttool and table.find(blockTools, ttool.Name:lower()) then tool.RemoteEvent:FireServer() end end end end end end) end })
 
-Window:CreateToggle({
-    Name = "Punch Fling Guest1337",
-    CurrentValue = false,
-    Flag = "PunchFling",
-    Callback = function(value)
-        punchFlingEnabled = value
-    end
-})
+-- Auto Punch Window:CreateSlider({ Name = "Auto Punch Range", Range = {0, 25}, Increment = 1, CurrentValue = 15, Callback = function(v) AutoPunchRange = v end })
 
-Window:CreateToggle({
-    Name = "Infinite Stamina",
-    CurrentValue = false,
-    Flag = "InfiniteStamina",
-    Callback = function(value)
-        infiniteStaminaEnabled = value
-    end
-})
+Window:CreateToggle({ Name = "Auto Punch", CurrentValue = false, Callback = function(v) AutoPunchEnabled = v task.spawn(function() while AutoPunchEnabled and task.wait(0.0001) do local tool = Character:FindFirstChildOfClass("Tool") if tool then for _, p in pairs(game.Players:GetPlayers()) do if p ~= Player and p.Character and p:DistanceFromCharacter(Character.HumanoidRootPart.Position) <= AutoPunchRange then tool:Activate() end end end end end) end })
 
-Window:CreateToggle({
-    Name = "Killer ESP",
-    CurrentValue = false,
-    Flag = "KillerESP",
-    Callback = function(value)
-        espEnabled.killer = value
-    end
-})
+-- Infinite Stamina Window:CreateToggle({ Name = "Infinite Stamina", CurrentValue = false, Callback = function(v) InfiniteStaminaEnabled = v task.spawn(function() while InfiniteStaminaEnabled and task.wait(0.1) do local s = Character and Character:FindFirstChild("Stamina") if s then s.Value = s.MaxValue or 100 end end end) end })
 
-Window:CreateToggle({
-    Name = "Generator ESP",
-    CurrentValue = false,
-    Flag = "GeneratorESP",
-    Callback = function(value)
-        espEnabled.generator = value
-    end
-})
+-- Auto Generator Window:CreateToggle({ Name = "Auto Solve Generator", CurrentValue = false, Callback = function(v) SolveGenEnabled = v task.spawn(function() while SolveGenEnabled and task.wait(1.5) do for _, g in pairs(workspace:GetDescendants()) do if g.Name:lower():find("puzzle") and g:FindFirstChild("RemoteEvent") then g.RemoteEvent:FireServer() end end end end) end })
 
-Window:CreateToggle({
-    Name = "Item ESP",
-    CurrentValue = false,
+-- ESP Toggles Window:CreateToggle({ Name = "Killer ESP", CurrentValue = false, Callback = function(v) KillerESPEnabled = v task.spawn(function() while KillerESPEnabled and task.wait(0.5) do for _, p in pairs(game.Players:GetPlayers()) do if p ~= Player and p.Character and table.find(killers, p.Name) then highlight(p.Character, Color3.new(1,0,0)) end end end end) end })
+
+Window:CreateToggle({ Name = "Survivor ESP", CurrentValue = false, Callback = function(v) SurvivorESPEnabled = v task.spawn(function() while SurvivorESPEnabled and task.wait(0.5) do for _, p in pairs(game.Players:GetPlayers()) do if p ~= Player and p.Character and table.find(survivors, p.Name) then highlight(p.Character, Color3.new(0,1,0)) end end end end) end })
+
+Window:CreateToggle({ Name = "Generator ESP", CurrentValue = false, Callback = function(v) GenESPEnabled = v task.spawn(function() while GenESPEnabled and task.wait(1) do for _, obj in pairs(workspace:GetDescendants()) do if obj:IsA("BasePart") and obj.Name:lower():find("generator") then highlight(obj, Color3.new(1,1,0)) end end end end) end })
+
+Window:CreateToggle({ Name = "Item ESP (Cola/Medkit)", CurrentValue = false, Callback = function(v) ItemESPEnabled = v task.spawn(function() while ItemESPEnabled and task.wait(1) do for _, obj in pairs(workspace:GetDescendants()) do if obj:IsA("BasePart") and (obj.Name:lower():find("cola") or obj.Name:lower():find("medkit")) then highlight(obj, Color3.new(0.5,0.5,1)) end end end end) end })
+
     Flag = "ItemESP",
     Callback = function(value)
         espEnabled.item = value
